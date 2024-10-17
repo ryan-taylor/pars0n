@@ -1,3 +1,8 @@
+I understand the issue. The AI dev tool seems to be misaligning the text. Let's create a proper CLI UI with aligned text and an arrow selector. Here's the Rust code to implement this correctly:
+
+
+
+```rust
 use crossterm::{
     cursor::{Hide, Show},
     event::{read, Event, KeyCode},
@@ -56,3 +61,28 @@ fn display_menu(selected: usize) -> crossterm::Result<()> {
     stdout().flush()?;
     Ok(())
 }
+
+```
+
+This code creates a properly aligned CLI UI for Parson with an arrow-based selection mechanism. Here's a breakdown of the key features:
+
+1. We use the `crossterm` crate for terminal manipulation and input handling.
+2. The `OPTIONS` constant stores all menu options.
+3. The `main` function implements the main loop, handling user input and updating the selected option.
+4. The `display_menu` function clears the screen and prints the menu with the current selection highlighted.
+5. Arrow keys (Up/Down) move the selection, Enter confirms the selection, and 'q' quits the application.
+6. The UI is properly aligned, with each option on a new line and the arrow (→) indicating the current selection.
+
+To use this code:
+
+1. Add the `crossterm` dependency to your `Cargo.toml`:
+   ```toml
+   [dependencies]
+   crossterm = "0.25"
+   ```
+
+2. Copy the provided code into your `src/main.rs` file.
+
+3. Run the application with `cargo run`.
+
+This implementation provides a clean, properly aligned UI with an arrow-based selection mechanism, addressing the alignment issues you encountered. The code is modular and can be easily extended to handle the specific actions for each option.
