@@ -1,0 +1,96 @@
+# Parson CLI UI Instructions
+
+## Main Menu
+
+1. Display the title "Parson - Purify your JSON" at the top of the screen.
+2. Show instructions: "Use ↑ and ↓ arrows to move, Enter to select, 'q' to quit"
+3. List all options vertically:
+   - Fast Reading
+   - Data Extraction
+   - Data Validation
+   - File Compression
+   - Multi-File Processing
+   - Custom Data Types
+   - Error Checking
+   - Pretty Printing
+   - Multi-Language Support
+   - Speed Optimization
+4. Highlight the currently selected option with an arrow (→) to the left of the option text.
+5. As the user presses ↑ and ↓ arrows, move the highlight accordingly.
+6. When Enter is pressed, proceed to the selected option's screen.
+7. If 'q' is pressed at any time, exit the application.
+
+## Option Screens
+
+For each option, follow these general guidelines:
+
+1. Clear the screen and display the option name at the top.
+2. Show relevant instructions or prompts.
+3. After completing the action, display a "Press any key to return to main menu" message.
+4. When a key is pressed, return to the main menu.
+
+### Fast Reading
+- Display "Processing files in the input folder..."
+- Show a progress bar or file names as they are processed.
+- After completion, display a summary (e.g., "Processed 10 files").
+
+### Data Extraction
+- Prompt: "Enter JSON key or path (e.g., 'user.name' or '/data/0/id'):"
+- Allow user to type the path and press Enter.
+- Display "Extracting data..." with a progress indicator.
+- Show a summary of extracted data or confirmation of extraction.
+
+### Data Validation
+- Display "Validating JSON files..."
+- Show progress as files are validated.
+- Present a summary of validation results (e.g., "5 valid, 2 invalid files").
+
+### File Compression
+- Show a sub-menu for compression levels:
+  → Low
+    Medium
+    High
+- Use the same arrow navigation as the main menu.
+- After selection, display "Compressing files..." with a progress indicator.
+- Show compression results (e.g., "Compressed 7 files, saving 30% space").
+
+### Multi-File Processing
+- Prompt: "Enter file pattern (e.g., '*.json' or 'user_*.json'):"
+- Allow user to type the pattern and press Enter.
+- Display "Processing files..." with a progress indicator.
+- Show a summary of processed files.
+
+### Custom Data Types
+- If predefined types exist, show a selection menu similar to the main menu.
+- If custom input is required, prompt the user with clear instructions.
+- Display "Applying custom data types..." during processing.
+
+### Error Checking
+- Show a sub-menu for error checking levels (e.g., Basic, Detailed, Comprehensive).
+- Use arrow navigation for selection.
+- Display "Checking for errors..." with a progress indicator.
+- Present a summary of found errors or confirmation of check completion.
+
+### Pretty Printing
+- Prompt: "Enter indentation spaces (2-8):"
+- Allow user to input a number and press Enter.
+- Show "Formatting JSON files..." during processing.
+- Display confirmation when complete.
+
+### Multi-Language Support
+- Show a sub-menu of supported languages or encodings.
+- Use arrow navigation for selection.
+- Display "Applying language settings..." during processing.
+- Confirm application of language settings.
+
+### Speed Optimization
+- Show a sub-menu of optimization profiles (e.g., Balanced, Memory-Optimized, Speed-Optimized).
+- Use arrow navigation for selection.
+- Display "Applying optimization settings..."
+- Confirm application of selected profile.
+
+For all options:
+- Use clear, non-technical language in all prompts and messages.
+- Provide immediate feedback for all user actions.
+- Use consistent navigation and selection mechanisms throughout.
+- Ensure all text is easily readable in a standard terminal.

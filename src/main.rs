@@ -2,6 +2,13 @@ use clap::Parser;
 use std::path::PathBuf;
 use anyhow::{Result, Context};
 use std::io::{self, Write};
+use crossterm::{
+    event::{self, Event, KeyCode},
+    terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType},
+    ExecutableCommand,
+    cursor,
+    style::{Color, SetForegroundColor},
+};
 
 mod parser;
 mod query;
@@ -45,7 +52,74 @@ fn select_output_format() -> Result<OutputFormat> {
     }
 }
 
+fn display_main_menu() -> Result<()> {
+    let menu_items = vec![
+        "Fast Reading",
+        "Data Extraction",
+        "Data Validation",
+        "File Compression",
+        "Multi-File Processing",
+        "Custom Data Types",
+        "Error Checking",
+        "Pretty Printing",
+        "Multi-Language Support",
+        "Speed Optimization",
+    ];
+
+    let mut selected = 0;
+    let mut stdout = io::stdout();
+
+    enable_raw_mode()?;
+
+    loop {
+        stdout.execute(Clear(ClearType::All))?;
+        stdout.execute(cursor::MoveTo(0, 0))?;
+
+        println!("Parson - Purify your JSON");
+        println!("Use ↑ and ↓ arrows to move, Enter to select, 'q' to quit");
+        println!();
+
+        for (i, item) in menu_items.iter().enumerate() {
+            if i == selected {
+                stdout.execute(SetForegroundColor(Color::Green))?;
+                println!("→ {}", item);
+                stdout.execute(SetForegroundColor(Color::Reset))?;
+            } else {
+                println!("  {}", item);
+            }
+        }
+
+        stdout.flush()?;
+
+        if let Event::Key(key_event) = event::read()? {
+            match key_event.code {
+                KeyCode::Up => {
+                    if selected > 0 {
+                        selected -= 1;
+                    }
+                }
+                KeyCode::Down => {
+                    if selected < menu_items.len() - 1 {
+                        selected += 1;
+                    }
+                }
+                KeyCode::Enter => {
+                    disable_raw_mode()?;
+                    return Ok(());
+                }
+                KeyCode::Char('q') => {
+                    disable_raw_mode()?;
+                    std::process::exit(0);
+                }
+                _ => {}
+            }
+        }
+    }
+}
+
 fn main() -> Result<()> {
+    display_main_menu()?;
+
     let cli = Cli::parse();
 
     let output_format = if let Some(format) = cli.format {
