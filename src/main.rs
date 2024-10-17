@@ -9,6 +9,8 @@ use std::fs;
 use std::path::Path;
 use serde_json::Value;
 use anyhow::Result;
+use flate2::write::GzEncoder;
+use flate2::Compression;
 
 const OPTIONS: [&str; 10] = [
     "Fast Reading",
@@ -29,9 +31,16 @@ fn main() -> crossterm::Result<()> {
         display_menu(selected)?;
         if let Event::Key(event) = read()? {
             match event.code {
-                KeyCode::Up => selected = (selected - 1 + OPTIONS.len()) % OPTIONS.len(),
-                KeyCode::Down => selected = (selected + 1) % OPTIONS.len(),
+                KeyCode::Up => {
+                    selected = (selected + OPTIONS.len() - 1) % OPTIONS.len();
+                    execute!(stdout(), Clear(ClearType::All))?;
+                }
+                KeyCode::Down => {
+                    selected = (selected + 1) % OPTIONS.len();
+                    execute!(stdout(), Clear(ClearType::All))?;
+                }
                 KeyCode::Enter => {
+                    execute!(stdout(), Clear(ClearType::All))?;
                     match selected {
                         0 => if let Err(e) = fast_reading() { eprintln!("Error: {}", e); },
                         1 => if let Err(e) = data_extraction() { eprintln!("Error: {}", e); },
@@ -45,14 +54,16 @@ fn main() -> crossterm::Result<()> {
                         9 => if let Err(e) = speed_optimization() { eprintln!("Error: {}", e); },
                         _ => {}
                     }
-                    read()?; // Wait for a key press before returning to the menu
+                    println!("\nPress any key to return to the main menu...");
+                    read()?;
+                    execute!(stdout(), Clear(ClearType::All))?;
                 }
                 KeyCode::Char('q') => break,
                 _ => {}
             }
         }
     }
-    execute!(stdout(), Show)?; // Show cursor before exiting
+    execute!(stdout(), Show)?;
     Ok(())
 }
 
@@ -91,7 +102,6 @@ fn fast_reading() -> Result<()> {
     }
 
     println!("All JSON files processed quickly.");
-    println!("Press any key to return to the main menu...");
     Ok(())
 }
 
@@ -115,7 +125,6 @@ fn data_extraction() -> Result<()> {
         }
     }
 
-    println!("Press any key to return to the main menu...");
     Ok(())
 }
 
@@ -138,14 +147,46 @@ fn data_validation() -> Result<()> {
     }
 
     println!("{} valid, {} invalid files", valid_count, invalid_count);
-    println!("Press any key to return to the main menu...");
     Ok(())
 }
 
 fn file_compression() -> Result<()> {
     println!("File Compression");
-    println!("Compression not implemented yet.");
-    println!("Press any key to return to the main menu...");
+    println!("Select compression level:");
+    println!("1. Low");
+    println!("2. Medium");
+    println!("3. High");
+    
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input)?;
+    let compression_level = match input.trim() {
+        "1" => Compression::fast(),
+        "2" => Compression::default(),
+        "3" => Compression::best(),
+        _ => {
+            println!("Invalid input. Using default compression level.");
+            Compression::default()
+        }
+    };
+
+    let input_dir = Path::new("JSON go here");
+    let output_dir = Path::new("JSON fresh here");
+
+    for entry in fs::read_dir(input_dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_file() && path.extension().unwrap_or_default() == "json" {
+            let content = fs::read_to_string(&path)?;
+            let output_path = output_dir.join(path.file_name().unwrap()).with_extension("json.gz");
+            let file = fs::File::create(&output_path)?;
+            let mut encoder = GzEncoder::new(file, compression_level);
+            encoder.write_all(content.as_bytes())?;
+            encoder.finish()?;
+            println!("Compressed: {}", output_path.display());
+        }
+    }
+
+    println!("All JSON files compressed.");
     Ok(())
 }
 
@@ -165,21 +206,18 @@ fn multi_file_processing() -> Result<()> {
         }
     }
 
-    println!("Press any key to return to the main menu...");
     Ok(())
 }
 
 fn custom_data_types() -> Result<()> {
     println!("Custom Data Types");
     println!("Custom data types not implemented yet.");
-    println!("Press any key to return to the main menu...");
     Ok(())
 }
 
 fn error_checking() -> Result<()> {
     println!("Error Checking");
     println!("Error checking not implemented yet.");
-    println!("Press any key to return to the main menu...");
     Ok(())
 }
 
@@ -208,20 +246,17 @@ fn pretty_printing() -> Result<()> {
     }
 
     println!("All JSON files pretty printed.");
-    println!("Press any key to return to the main menu...");
     Ok(())
 }
 
 fn multi_language_support() -> Result<()> {
     println!("Multi-Language Support");
     println!("Multi-language support not implemented yet.");
-    println!("Press any key to return to the main menu...");
     Ok(())
 }
 
 fn speed_optimization() -> Result<()> {
     println!("Speed Optimization");
     println!("Speed optimization not implemented yet.");
-    println!("Press any key to return to the main menu...");
     Ok(())
 }
