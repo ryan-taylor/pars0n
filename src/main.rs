@@ -9,9 +9,9 @@ mod formatter;
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
-    /// Path to the JSON file
-    #[arg(short, long)]
-    file: PathBuf,
+    /// Paths to the JSON files
+    #[arg(short, long, required = true, num_args = 1.., value_delimiter = ' ')]
+    files: Vec<PathBuf>,
 
     /// JSON key to query
     #[arg(short, long)]
@@ -21,19 +21,24 @@ struct Cli {
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    let json_content = std::fs::read_to_string(&cli.file)
-        .with_context(|| format!("Failed to read file: {:?}", cli.file))?;
+    for file in &cli.files {
+        println!("Processing file: {:?}", file);
+        
+        let json_content = std::fs::read_to_string(file)
+            .with_context(|| format!("Failed to read file: {:?}", file))?;
 
-    let parsed_json = parser::parse_json(&json_content)
-        .with_context(|| "Failed to parse JSON")?;
+        let parsed_json = parser::parse_json(&json_content)
+            .with_context(|| "Failed to parse JSON")?;
 
-    let query_result = query::query_json(&parsed_json, &cli.key)
-        .with_context(|| format!("Failed to query JSON with key: {}", cli.key))?;
+        let query_result = query::query_json(&parsed_json, &cli.key)
+            .with_context(|| format!("Failed to query JSON with key: {}", cli.key))?;
 
-    let formatted_output = formatter::format_for_google_cloud_ai(&query_result)
-        .with_context(|| "Failed to format output for Google Cloud AI")?;
+        let formatted_output = formatter::format_for_google_cloud_ai(&query_result)
+            .with_context(|| "Failed to format output for Google Cloud AI")?;
 
-    println!("{}", formatted_output);
+        println!("{}", formatted_output);
+        println!("---"); // Separator between file outputs
+    }
 
     Ok(())
 }
