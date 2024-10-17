@@ -9,8 +9,9 @@ Parson is a Rust CLI application that uses simd-lite for high-performance JSON p
 - Support for processing multiple JSON files in batch
 - Multiple output format options:
   - Raw JSON
-  - Google Cloud AI compatible format (default)
+  - Google Cloud AI compatible format
   - Pretty-printed JSON
+- Interactive output format selection menu
 - Error handling with informative messages
 - Deployable on Replit
 
@@ -40,13 +41,15 @@ For example:
 ./target/release/parson --files sample.json sample2.json --query "example.name" --format pretty_json
 ```
 
+If you don't specify the `--format` option, Parson will present an interactive menu to select the output format.
+
 This will parse the JSON files, execute the specified query on each file, and output the results in the specified format.
 
 ### Command-line Options
 
 - `--files`: Paths to the JSON files (required, multiple files can be specified)
 - `--query`: JSON query string (required)
-- `--format`: Output format (optional, default is "google_cloud_ai")
+- `--format`: Output format (optional, if not provided, an interactive menu will be shown)
 
 ## Query Syntax
 
@@ -64,10 +67,10 @@ Examples:
 Parson supports three output formats:
 
 1. `raw`: Outputs the raw JSON result of the query
-2. `google_cloud_ai`: Formats the output to be compatible with Google Cloud AI processing (default)
+2. `google_cloud_ai`: Formats the output to be compatible with Google Cloud AI processing
 3. `pretty_json`: Outputs the result as pretty-printed JSON
 
-To specify the output format, use the `--format` option followed by one of the above format names.
+To specify the output format, use the `--format` option followed by one of the above format names. If you don't specify a format, you'll be prompted to choose one interactively.
 
 ## JSON File Locations
 

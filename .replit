@@ -27,6 +27,10 @@ args = "Verify Parson"
 task = "workflow.run"
 args = "Final Parson Test"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Test Interactive Menu"
+
 [[workflows.workflow]]
 name = "Build and Run JSON Parser CLI"
 author = "agent"
@@ -81,6 +85,17 @@ agentRequireRestartOnSave = false
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "cargo build --release && ./target/release/parson --files sample.json sample2.json --query 'example.name' --format google_cloud_ai"
+
+[[workflows.workflow]]
+name = "Test Interactive Menu"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cargo build --release && ./target/release/parson --files sample.json sample2.json --query 'example.name'"
 
 [deployment]
 run = ["sh", "-c", "cargo build --release && ./target/release/json_parser_cli --files sample.json sample2.json --query 'example.name'"]

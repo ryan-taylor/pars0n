@@ -1,6 +1,7 @@
 use clap::Parser;
 use std::path::PathBuf;
 use anyhow::{Result, Context};
+use std::io::{self, Write};
 
 mod parser;
 mod query;
@@ -20,18 +21,42 @@ struct Cli {
     query: String,
 
     /// Output format (raw, google_cloud_ai, pretty_json)
-    #[arg(short, long, default_value = "google_cloud_ai")]
-    format: String,
+    #[arg(short, long)]
+    format: Option<String>,
+}
+
+fn select_output_format() -> Result<OutputFormat> {
+    println!("Select output format:");
+    println!("1. Raw JSON");
+    println!("2. Google Cloud AI compatible");
+    println!("3. Pretty JSON");
+
+    print!("Enter your choice (1-3): ");
+    io::stdout().flush()?;
+
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
+
+    match input.trim() {
+        "1" => Ok(OutputFormat::Raw),
+        "2" => Ok(OutputFormat::GoogleCloudAI),
+        "3" => Ok(OutputFormat::PrettyJson),
+        _ => Err(anyhow::anyhow!("Invalid choice. Please select 1, 2, or 3.")),
+    }
 }
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    let output_format = match cli.format.as_str() {
-        "raw" => OutputFormat::Raw,
-        "google_cloud_ai" => OutputFormat::GoogleCloudAI,
-        "pretty_json" => OutputFormat::PrettyJson,
-        _ => return Err(anyhow::anyhow!("Invalid output format. Choose 'raw', 'google_cloud_ai', or 'pretty_json'")),
+    let output_format = if let Some(format) = cli.format {
+        match format.as_str() {
+            "raw" => OutputFormat::Raw,
+            "google_cloud_ai" => OutputFormat::GoogleCloudAI,
+            "pretty_json" => OutputFormat::PrettyJson,
+            _ => return Err(anyhow::anyhow!("Invalid output format. Choose 'raw', 'google_cloud_ai', or 'pretty_json'")),
+        }
+    } else {
+        select_output_format()?
     };
 
     for file in &cli.files {
