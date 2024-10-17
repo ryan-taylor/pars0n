@@ -1,8 +1,36 @@
+# Parson Configuration File
+
 [general]
 name = "parson"
 version = "0.1.0"
 
 [deployment]
+# Set the target to "non-replit" for deployments outside of Replit
 target = "non-replit"
+
+# Command to build the project
 build_command = "cargo build --release"
+
+# Command to run the application
 run_command = "./target/release/parson"
+
+[folders]
+# Specify the input and output folder names
+input_folder = "JSON go here"
+output_folder = "JSON fresh here"
+
+[performance]
+# Set to true to enable SIMD optimizations (requires CPU support)
+use_simd = true
+
+# Default compression level for file compression (1-9, where 9 is highest)
+default_compression_level = 6
+
+[formatting]
+# Default number of spaces for indentation in pretty printing
+default_indent_spaces = 2
+
+# Maximum file size (in MB) for processing
+max_file_size = 100
+
+# Note: Adjust these settings as needed for your specific deployment environment

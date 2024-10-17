@@ -14,29 +14,52 @@ Parson is a Rust CLI application that uses simd-lite for high-performance JSON p
 - Interactive menu with arrow key navigation
 - Automatic processing of JSON files from 'JSON go here' to 'JSON fresh here' folders
 - Error handling with informative messages
-- Deployable on Replit
+- Deployable on Replit and other platforms
 
 ## Installation
 
-Parson is designed to be used on Replit. To use it, simply clone the repository and build the project using Cargo.
+### Cloning the Repository
+
+To get started with Parson, clone the repository using the following command:
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/your-username/parson.git
 cd parson
+```
+
+### Dependencies
+
+Parson requires Rust and Cargo to be installed on your system. If you don't have Rust installed, you can install it by following the instructions at [https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install).
+
+After installing Rust, you can install the required dependencies by running:
+
+```bash
+cargo build
+```
+
+This command will download and compile all necessary dependencies specified in the `Cargo.toml` file.
+
+## Building the Project
+
+To build the project, run the following command in the project root directory:
+
+```bash
 cargo build --release
 ```
 
-The built executable will be available in the `target/release` directory.
+This will create an optimized executable in the `target/release` directory.
 
-## Usage
+## Running the Application
 
-To use Parson, run the following command:
+After building the project, you can run Parson using the following command:
 
 ```bash
 ./target/release/parson
 ```
 
 This will launch the interactive menu, where you can select the desired operation using the arrow keys and Enter.
+
+## Usage
 
 ### Menu Options
 
@@ -58,6 +81,14 @@ Parson uses two specific folders for input and output:
 - `JSON go here`: Place your input JSON files in this folder.
 - `JSON fresh here`: Processed JSON files will be output to this folder.
 
+## Differences from Replit Version
+
+When running Parson outside of Replit, there are a few differences to note:
+
+1. You need to manually create the `JSON go here` and `JSON fresh here` folders in the project root directory.
+2. The application uses the `config.toml` file for configuration. Make sure this file is properly set up for your environment.
+3. You may need to adjust file paths in the code if your directory structure differs from the default setup.
+
 ## Development
 
 To contribute to Parson or modify it for your needs:
@@ -67,18 +98,10 @@ To contribute to Parson or modify it for your needs:
 3. Run tests: `cargo test`
 4. Build the project: `cargo build --release`
 
-## Deployment on Replit
-
-Parson is designed to be easily deployable on Replit. To deploy:
-
-1. Create a new Repl and select "Import from GitHub"
-2. Enter the repository URL
-3. Once imported, Replit will automatically detect the Rust project and set up the environment
-4. Use the Run button to build and run the project
-
 ## Project Structure
 
-- `.gitignore`: Specifies intentionally untracked files to ignore
+- `src/`: Contains the Rust source code files
+- `Cargo.toml`: Rust package manifest file
 - `config.toml`: Contains configuration for non-Replit deployments
 - `README.md`: This file, containing project information and usage instructions
 

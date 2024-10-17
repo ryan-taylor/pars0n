@@ -47,6 +47,10 @@ args = "Test Updated Parson"
 task = "workflow.run"
 args = "Test Updated CLI UI"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Test All Menu Options"
+
 [[workflows.workflow]]
 name = "Build and Run JSON Parser CLI"
 author = "agent"
@@ -148,6 +152,17 @@ args = "cargo build --release && ./target/release/parson"
 
 [[workflows.workflow]]
 name = "Test Updated CLI UI"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cargo build --release && ./target/release/parson"
+
+[[workflows.workflow]]
+name = "Test All Menu Options"
 author = "agent"
 
 [workflows.workflow.metadata]
