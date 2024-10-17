@@ -75,19 +75,23 @@ fn display_main_menu() -> Result<()> {
         stdout.execute(Clear(ClearType::All))?;
         stdout.execute(cursor::MoveTo(0, 0))?;
 
-        println!("Parson - Purify your JSON");
-        println!("Use ↑ and ↓ arrows to move, Enter to select, 'q' to quit");
-        println!();
+        println!("┌──────────────────────────────────────────────────────────────────────────────┐");
+        println!("│                          Parson - Purify your JSON                           │");
+        println!("├──────────────────────────────────────────────────────────────────────────────┤");
+        println!("│   Use ↑ and ↓ arrows to move, Enter to select, 'q' to quit                   │");
+        println!("├──────────────────────────────────────────────────────────────────────────────┤");
 
         for (i, item) in menu_items.iter().enumerate() {
             if i == selected {
                 stdout.execute(SetForegroundColor(Color::Green))?;
-                println!("→ {}", item);
+                println!("│ → {:<74} │", item);
                 stdout.execute(SetForegroundColor(Color::Reset))?;
             } else {
-                println!("  {}", item);
+                println!("│   {:<74} │", item);
             }
         }
+
+        println!("└──────────────────────────────────────────────────────────────────────────────┘");
 
         stdout.flush()?;
 
