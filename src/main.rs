@@ -2,7 +2,7 @@ use crossterm::{
     cursor::{Hide, Show},
     event::{read, Event, KeyCode},
     execute,
-    terminal::{Clear, ClearType},
+    terminal::{Clear, ClearType, enable_raw_mode, disable_raw_mode},
 };
 use std::io::{stdout, Write};
 use std::fs;
@@ -26,6 +26,7 @@ const OPTIONS: [&str; 10] = [
 ];
 
 fn main() -> crossterm::Result<()> {
+    enable_raw_mode()?;
     let mut selected = 0;
     loop {
         display_menu(selected)?;
@@ -33,11 +34,9 @@ fn main() -> crossterm::Result<()> {
             match event.code {
                 KeyCode::Up => {
                     selected = (selected + OPTIONS.len() - 1) % OPTIONS.len();
-                    execute!(stdout(), Clear(ClearType::All))?;
                 }
                 KeyCode::Down => {
                     selected = (selected + 1) % OPTIONS.len();
-                    execute!(stdout(), Clear(ClearType::All))?;
                 }
                 KeyCode::Enter => {
                     execute!(stdout(), Clear(ClearType::All))?;
@@ -56,13 +55,13 @@ fn main() -> crossterm::Result<()> {
                     }
                     println!("\nPress any key to return to the main menu...");
                     read()?;
-                    execute!(stdout(), Clear(ClearType::All))?;
                 }
                 KeyCode::Char('q') => break,
                 _ => {}
             }
         }
     }
+    disable_raw_mode()?;
     execute!(stdout(), Show)?;
     Ok(())
 }
