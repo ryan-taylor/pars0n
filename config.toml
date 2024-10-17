@@ -1,0 +1,8 @@
+[general]
+name = "parson"
+version = "0.1.0"
+
+[deployment]
+target = "non-replit"
+build_command = "cargo build --release"
+run_command = "./target/release/parson"
