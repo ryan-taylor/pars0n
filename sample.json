@@ -1,0 +1,8 @@
+{
+  "example": {
+    "name": "John Doe",
+    "age": 30,
+    "city": "New York"
+  },
+  "another_key": "This is another value"
+}

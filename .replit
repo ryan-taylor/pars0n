@@ -1,0 +1,26 @@
+modules = ["rust"]
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Build and Run JSON Parser CLI"
+
+[[workflows.workflow]]
+name = "Build and Run JSON Parser CLI"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cargo build --release && ./target/release/json_parser_cli --file sample.json --key example"
+
+[deployment]
+run = ["sh", "-c", "cargo build --release && ./target/release/json_parser_cli --file sample.json --key example"]
