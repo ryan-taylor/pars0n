@@ -13,9 +13,9 @@ struct Cli {
     #[arg(short, long, required = true, num_args = 1.., value_delimiter = ' ')]
     files: Vec<PathBuf>,
 
-    /// JSON key to query
+    /// JSON query string (e.g., "example.name" or "array.0.key")
     #[arg(short, long)]
-    key: String,
+    query: String,
 }
 
 fn main() -> Result<()> {
@@ -30,8 +30,8 @@ fn main() -> Result<()> {
         let parsed_json = parser::parse_json(&json_content)
             .with_context(|| "Failed to parse JSON")?;
 
-        let query_result = query::query_json(&parsed_json, &cli.key)
-            .with_context(|| format!("Failed to query JSON with key: {}", cli.key))?;
+        let query_result = query::query_json(&parsed_json, &cli.query)
+            .with_context(|| format!("Failed to query JSON with query: {}", cli.query))?;
 
         let formatted_output = formatter::format_for_google_cloud_ai(&query_result)
             .with_context(|| "Failed to format output for Google Cloud AI")?;

@@ -20,7 +20,7 @@ agentRequireRestartOnSave = false
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cargo build --release && ./target/release/json_parser_cli --file sample.json --key example"
+args = "cargo build --release && ./target/release/json_parser_cli --files sample.json sample2.json --query 'example.name'"
 
 [deployment]
-run = ["sh", "-c", "cargo build --release && ./target/release/json_parser_cli --file sample.json --key example"]
+run = ["sh", "-c", "cargo build --release && ./target/release/json_parser_cli --files sample.json sample2.json --query 'example.name'"]
