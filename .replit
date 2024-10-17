@@ -31,6 +31,10 @@ args = "Final Parson Test"
 task = "workflow.run"
 args = "Test Interactive Menu"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Test Simplified Menu"
+
 [[workflows.workflow]]
 name = "Build and Run JSON Parser CLI"
 author = "agent"
@@ -88,6 +92,17 @@ args = "cargo build --release && ./target/release/parson --files sample.json sam
 
 [[workflows.workflow]]
 name = "Test Interactive Menu"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cargo build --release && ./target/release/parson --files sample.json sample2.json --query 'example.name'"
+
+[[workflows.workflow]]
+name = "Test Simplified Menu"
 author = "agent"
 
 [workflows.workflow.metadata]
