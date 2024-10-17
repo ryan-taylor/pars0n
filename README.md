@@ -11,7 +11,7 @@ Parson is a Rust CLI application that uses simd-lite for high-performance JSON p
   - Raw JSON
   - Google Cloud AI compatible format
   - Pretty-printed JSON
-- Interactive output format selection menu
+- Interactive menu for selecting operations
 - Error handling with informative messages
 - Deployable on Replit
 
@@ -32,90 +32,25 @@ The built executable will be available in the `target/release` directory.
 To use Parson, run the following command:
 
 ```bash
-./target/release/parson --files <path_to_json_file1> <path_to_json_file2> ... --query <json_query> [--format <output_format>]
+./target/release/parson
 ```
 
-For example:
+This will launch the interactive menu, where you can select the desired operation using the arrow keys and Enter.
 
-```bash
-./target/release/parson --files sample.json sample2.json --query "example.name" --format pretty_json
-```
+### Menu Options
 
-If you don't specify the `--format` option, Parson will present an interactive menu to select the output format.
-
-This will parse the JSON files, execute the specified query on each file, and output the results in the specified format.
-
-### Command-line Options
-
-- `--files`: Paths to the JSON files (required, multiple files can be specified)
-- `--query`: JSON query string (required)
-- `--format`: Output format (optional, if not provided, an interactive menu will be shown)
-
-## Running the Application
-
-To run the Parson application on Replit, follow these steps:
-
-1. Place your JSON files in the 'JSON go here' folder. You can do this by clicking on the folder icon in the Replit file explorer, navigating to the 'JSON go here' folder, and uploading your JSON files.
-
-2. To run the application, use the following command in the Replit shell:
-
-   ```bash
-   run parson --files "JSON go here"/* --query <your_query>
-   ```
-
-   Replace `<your_query>` with the JSON query you want to execute on your files.
-
-3. The application will process all JSON files in the 'JSON go here' folder. Each file will be parsed, queried, and the results will be displayed in the console.
-
-4. If you haven't specified an output format using the `--format` option, you'll be prompted to select an output format interactively. You'll see a menu like this:
-
-   ```
-   Select output format:
-   1. Raw JSON
-   2. Google Cloud AI compatible
-   3. Pretty JSON
-   Enter your choice (1-3):
-   ```
-
-   Type the number corresponding to your desired output format and press Enter.
-
-5. The processed results will be displayed in the console. If you want to save the output, you can redirect it to a file in the 'JSON fresh here' folder. For example:
-
-   ```bash
-   run parson --files "JSON go here"/* --query <your_query> > "JSON fresh here/output.json"
-   ```
-
-   This will save the output to a file named `output.json` in the 'JSON fresh here' folder.
-
-Remember, you can always refer to the Usage section above for more detailed information on the command-line options and query syntax.
-
-## Query Syntax
-
-The query syntax supports nested key access and array indexing:
-
-- Use dot notation for nested keys: `parent.child.grandchild`
-- Use numeric indices for array access: `array.0.key`
-
-Examples:
-- `example.name` will retrieve the "name" field inside the "example" object
-- `data.users.0.email` will retrieve the email of the first user in the "users" array inside the "data" object
-
-## Output Formats
-
-Parson supports three output formats:
-
-1. `raw`: Outputs the raw JSON result of the query
-2. `google_cloud_ai`: Formats the output to be compatible with Google Cloud AI processing
-3. `pretty_json`: Outputs the result as pretty-printed JSON
-
-To specify the output format, use the `--format` option followed by one of the above format names. If you don't specify a format, you'll be prompted to choose one interactively.
+1. Process All JSON Files: This option automatically processes all JSON files in the 'JSON go here' folder and outputs the results to the 'JSON fresh here' folder.
+2. Data Extraction: (Functionality to be implemented)
+3. Data Validation: (Functionality to be implemented)
+4. Pretty Printing: (Functionality to be implemented)
+5. Exit: Quit the application
 
 ## JSON File Locations
 
-Parson expects JSON files to be placed in two specific folders:
+Parson uses two specific folders for input and output:
 
 - `JSON go here`: Place your input JSON files in this folder.
-- `JSON fresh here`: This folder is used for any output or processed JSON files.
+- `JSON fresh here`: Processed JSON files will be output to this folder.
 
 ## Development
 
