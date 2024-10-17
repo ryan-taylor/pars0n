@@ -23,7 +23,7 @@ fn format_for_google_cloud_ai(value: &Value) -> Result<String> {
         },
         "metadata": {
             "format": "json",
-            "source": "json_parser_cli",
+            "source": "parson",
         }
     });
 

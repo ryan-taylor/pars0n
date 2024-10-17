@@ -1,19 +1,19 @@
-# JSON Parser CLI
+# Parson - JSON Parser CLI
 
 This is a Rust CLI application that uses serde_json for JSON parsing and querying. The output can be formatted in multiple ways, including a format compatible with Google Cloud AI processing.
 
 ## Usage
 
-To use the JSON Parser CLI, run the following command:
+To use Parson, run the following command:
 
 ```
-json_parser_cli --files <path_to_json_file1> <path_to_json_file2> ... --query <json_query> [--format <output_format>]
+parson --files <path_to_json_file1> <path_to_json_file2> ... --query <json_query> [--format <output_format>]
 ```
 
 For example:
 
 ```
-json_parser_cli --files sample1.json sample2.json --query "example.name" --format pretty_json
+parson --files sample1.json sample2.json --query "example.name" --format pretty_json
 ```
 
 This will parse the JSON files, execute the specified query on each file, and output the results in the specified format.
@@ -42,7 +42,7 @@ Examples:
 
 ## Output Formats
 
-The CLI supports three output formats:
+Parson supports three output formats:
 
 1. `raw`: Outputs the raw JSON result of the query
 2. `google_cloud_ai`: Formats the output to be compatible with Google Cloud AI processing (default)
