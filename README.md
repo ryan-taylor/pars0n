@@ -51,6 +51,44 @@ This will parse the JSON files, execute the specified query on each file, and ou
 - `--query`: JSON query string (required)
 - `--format`: Output format (optional, if not provided, an interactive menu will be shown)
 
+## Running the Application
+
+To run the Parson application on Replit, follow these steps:
+
+1. Place your JSON files in the 'JSON go here' folder. You can do this by clicking on the folder icon in the Replit file explorer, navigating to the 'JSON go here' folder, and uploading your JSON files.
+
+2. To run the application, use the following command in the Replit shell:
+
+   ```bash
+   run parson --files "JSON go here"/* --query <your_query>
+   ```
+
+   Replace `<your_query>` with the JSON query you want to execute on your files.
+
+3. The application will process all JSON files in the 'JSON go here' folder. Each file will be parsed, queried, and the results will be displayed in the console.
+
+4. If you haven't specified an output format using the `--format` option, you'll be prompted to select an output format interactively. You'll see a menu like this:
+
+   ```
+   Select output format:
+   1. Raw JSON
+   2. Google Cloud AI compatible
+   3. Pretty JSON
+   Enter your choice (1-3):
+   ```
+
+   Type the number corresponding to your desired output format and press Enter.
+
+5. The processed results will be displayed in the console. If you want to save the output, you can redirect it to a file in the 'JSON fresh here' folder. For example:
+
+   ```bash
+   run parson --files "JSON go here"/* --query <your_query> > "JSON fresh here/output.json"
+   ```
+
+   This will save the output to a file named `output.json` in the 'JSON fresh here' folder.
+
+Remember, you can always refer to the Usage section above for more detailed information on the command-line options and query syntax.
+
 ## Query Syntax
 
 The query syntax supports nested key access and array indexing:
