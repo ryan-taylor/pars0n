@@ -10,7 +10,7 @@ use std::io::{stdout, Write};
 use std::fs;
 use std::path::Path;
 use serde_json::Value;
-use anyhow::Result;
+use anyhow::{Result, Error};
 use flate2::write::GzEncoder;
 use flate2::Compression;
 
@@ -44,22 +44,32 @@ fn main() -> crossterm::Result<()> {
                 KeyCode::Enter => {
                     execute!(stdout(), Clear(ClearType::All))?;
                     match selected {
-                        0 => if let Err(e) = fast_reading() { print_error(&e)?; },
-                        1 => if let Err(e) = data_extraction() { print_error(&e)?; },
-                        2 => if let Err(e) = data_validation() { print_error(&e)?; },
-                        3 => if let Err(e) = file_compression() { print_error(&e)?; },
-                        4 => if let Err(e) = multi_file_processing() { print_error(&e)?; },
-                        5 => if let Err(e) = custom_data_types() { print_error(&e)?; },
-                        6 => if let Err(e) = error_checking() { print_error(&e)?; },
-                        7 => if let Err(e) = pretty_printing() { print_error(&e)?; },
-                        8 => if let Err(e) = multi_language_support() { print_error(&e)?; },
-                        9 => if let Err(e) = speed_optimization() { print_error(&e)?; },
+                        0 => if let Err(e) = fast_reading() { print_error(e)?; },
+                        1 => if let Err(e) = data_extraction() { print_error(e)?; },
+                        2 => if let Err(e) = data_validation() { print_error(e)?; },
+                        3 => if let Err(e) = file_compression() { print_error(e)?; },
+                        4 => if let Err(e) = multi_file_processing() { print_error(e)?; },
+                        5 => if let Err(e) = custom_data_types() { print_error(e)?; },
+                        6 => if let Err(e) = error_checking() { print_error(e)?; },
+                        7 => if let Err(e) = pretty_printing() { print_error(e)?; },
+                        8 => if let Err(e) = multi_language_support() { print_error(e)?; },
+                        9 => if let Err(e) = speed_optimization() { print_error(e)?; },
                         _ => {}
                     }
                     clean_print("\nPress any key to return to the main menu...")?;
-                    read()?;
+                    // Wait for a key press before returning to the main menu
+                    loop {
+                        if let Event::Key(_) = read()? {
+                            break;
+                        }
+                    }
                 }
                 KeyCode::Char('q') => break,
+                KeyCode::Esc => {
+                    // If we're in a submenu, this will just return to the main menu
+                    // If we're already in the main menu, this will do nothing
+                    continue;
+                }
                 _ => {}
             }
         }
@@ -77,8 +87,9 @@ fn display_menu(selected: usize) -> crossterm::Result<()> {
         Hide
     )?;
     
-    println!("{}", "Parson - Purify your JSON".bold());
-    println!("Use ↑ and ↓ arrows to move, Enter to select, 'q' to quit\n");
+    clean_print(&"Parson - Purify your JSON".bold().to_string())?;
+    clean_print("Use ↑ and ↓ arrows to move, Enter to select, Esc to go back, 'q' to quit")?;
+    clean_print("")?;  // Add an empty line for better spacing
 
     for (index, option) in OPTIONS.iter().enumerate() {
         let line = if index == selected {
@@ -88,7 +99,7 @@ fn display_menu(selected: usize) -> crossterm::Result<()> {
         };
         execute!(
             stdout(),
-            crossterm::cursor::MoveTo(0, (index + 3) as u16),
+            crossterm::cursor::MoveTo(0, (index + 4) as u16),
             Print(line)
         )?;
     }
@@ -371,6 +382,6 @@ fn clean_print(text: &str) -> crossterm::Result<()> {
     Ok(())
 }
 
-fn print_error(e: &dyn std::error::Error) -> crossterm::Result<()> {
+fn print_error(e: Error) -> crossterm::Result<()> {
     clean_print(&format!("Error: {}", e))
 }
