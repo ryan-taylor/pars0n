@@ -1,10 +1,8 @@
 use crossterm::{
-    cursor::{Hide, Show},
+    cursor::Show,
     event::{read, Event, KeyCode},
     execute,
     terminal::{Clear, ClearType, enable_raw_mode, disable_raw_mode},
-    style::{Print, Stylize},
-    queue,
 };
 use std::io::{stdout, Write};
 use std::fs;
@@ -14,7 +12,6 @@ use anyhow::{Result, Error};
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use std::path::PathBuf;
-use std::env;
 
 const OPTIONS: [&str; 10] = [
     "Fast Reading",
@@ -33,42 +30,47 @@ const INPUT_DIR: &str = "/workspaces/rust/JSIN";
 const OUTPUT_DIR: &str = "/workspaces/rust/JSON";
 
 fn main() -> crossterm::Result<()> {
-    // Add this check at the beginning of main
+    // Check if we're in the correct directory
     if !Path::new("/workspaces/rust").exists() {
-        eprintln!("Error: This application must be run in the /workspaces/rust directory.");
+        println!("Error: This application must be run in the /workspaces/rust directory.");
         return Ok(());
-    }
-
-    enable_raw_mode()?;
-    
-    if !crossterm::terminal::is_raw_mode_enabled()? {
-        eprintln!("Failed to enter raw mode. The CLI UI may not work correctly.");
     }
 
     let input_dir = PathBuf::from(INPUT_DIR);
     let output_dir = PathBuf::from(OUTPUT_DIR);
 
+    // Check if required directories exist
     if !input_dir.exists() || !output_dir.exists() {
-        clean_print("Error: Required directories not found.")?;
+        println!("Error: Required directories not found.");
         if !input_dir.exists() {
-            clean_print(&format!("The '{}' directory is missing.", INPUT_DIR))?;
+            println!("The '{}' directory is missing.", INPUT_DIR);
         }
         if !output_dir.exists() {
-            clean_print(&format!("The '{}' directory is missing.", OUTPUT_DIR))?;
+            println!("The '{}' directory is missing.", OUTPUT_DIR);
         }
-        clean_print("Please create these directories and add JSON files to the input directory.")?;
-        clean_print("Press any key to exit...")?;
-        read()?;
+        println!("Please create these directories and add JSON files to the input directory.");
+        println!("Press Enter to exit...");
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input)?;
         return Ok(());
     }
 
+    // Check if input directory is empty
     if fs::read_dir(&input_dir)?.next().is_none() {
-        clean_print(&format!("The '{}' directory is empty. Please add JSON files to process.", INPUT_DIR))?;
-        clean_print("Press any key to exit...")?;
-        read()?;
+        println!("\nYour Parson is here my child, please place your JSON in the sin bin ({}) and call for me again!", INPUT_DIR);
+        println!("\nPress Enter to exit...");
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input)?;
         return Ok(());
     }
 
+    // If we've made it here, we can start the application
+    run_application()
+}
+
+fn run_application() -> crossterm::Result<()> {
+    enable_raw_mode()?;
+    
     let mut selected = 0;
     loop {
         display_menu(selected)?;
@@ -91,7 +93,7 @@ fn main() -> crossterm::Result<()> {
                         9 => if let Err(e) = speed_optimization() { print_error(e)?; },
                         _ => {}
                     }
-                    clean_print("\nPress any key to return to the main menu...")?;
+                    println!("\nPress any key to return to the main menu...");
                     read()?; // Wait for any key press
                 }
                 KeyCode::Char('q') => break,
@@ -106,28 +108,15 @@ fn main() -> crossterm::Result<()> {
 }
 
 fn display_menu(selected: usize) -> crossterm::Result<()> {
-    execute!(
-        stdout(),
-        Clear(ClearType::All),
-        crossterm::cursor::MoveTo(0, 0),
-        Hide
-    )?;
-    
-    clean_print(&"Parson - Purify your JSON".bold().to_string())?;
-    clean_print("Use ↑ and ↓ arrows to move, Enter to select, Esc to go back, 'q' to quit")?;
-    clean_print("")?;  // Add an empty line for better spacing
+    println!("Parson - Purify your JSON");
+    println!("Use Up/Down arrows to move, Enter to select, Esc to go back, 'q' to quit\n");
 
     for (index, option) in OPTIONS.iter().enumerate() {
-        let line = if index == selected {
-            format!("→ {}", option).green()
+        if index == selected {
+            println!("→ {}", option);
         } else {
-            format!("  {}", option).stylize()
-        };
-        execute!(
-            stdout(),
-            crossterm::cursor::MoveTo(0, (index + 4) as u16),
-            Print(line)
-        )?;
+            println!("  {}", option);
+        }
     }
     
     stdout().flush()?;
@@ -438,11 +427,7 @@ fn speed_optimization() -> Result<()> {
 }
 
 fn clean_print(text: &str) -> crossterm::Result<()> {
-    execute!(
-        stdout(),
-        Print(text),
-        Print("\n")
-    )?;
+    println!("{}", text);
     stdout().flush()?;
     Ok(())
 }
@@ -452,7 +437,9 @@ fn print_error(e: Error) -> crossterm::Result<()> {
 }
 
 fn get_user_input(prompt: &str) -> crossterm::Result<Option<String>> {
-    clean_print(prompt)?;
+    println!("\n{}", prompt);
+    print!("> ");
+    stdout().flush()?;
     loop {
         if let Event::Key(event) = read()? {
             match event.code {
