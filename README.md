@@ -23,7 +23,7 @@ Parson is a Rust CLI application that uses simd-lite for high-performance JSON p
 To get started with Parson, clone the repository using the following command:
 
 ```bash
-git clone https://github.com/your-username/parson.git
+git clone https://github.com/ryan-taylor/parson.git
 cd parson
 ```
 

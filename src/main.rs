@@ -3,6 +3,8 @@ use crossterm::{
     event::{read, Event, KeyCode},
     execute,
     terminal::{Clear, ClearType, enable_raw_mode, disable_raw_mode},
+    style::{Print, Stylize},
+    queue,
 };
 use std::io::{stdout, Write};
 use std::fs;
@@ -27,33 +29,34 @@ const OPTIONS: [&str; 10] = [
 
 fn main() -> crossterm::Result<()> {
     enable_raw_mode()?;
+    
+    if !crossterm::terminal::is_raw_mode_enabled()? {
+        eprintln!("Failed to enter raw mode. The CLI UI may not work correctly.");
+    }
+
     let mut selected = 0;
     loop {
         display_menu(selected)?;
         if let Event::Key(event) = read()? {
             match event.code {
-                KeyCode::Up => {
-                    selected = (selected + OPTIONS.len() - 1) % OPTIONS.len();
-                }
-                KeyCode::Down => {
-                    selected = (selected + 1) % OPTIONS.len();
-                }
+                KeyCode::Up => selected = (selected - 1 + OPTIONS.len()) % OPTIONS.len(),
+                KeyCode::Down => selected = (selected + 1) % OPTIONS.len(),
                 KeyCode::Enter => {
                     execute!(stdout(), Clear(ClearType::All))?;
                     match selected {
-                        0 => if let Err(e) = fast_reading() { eprintln!("Error: {}", e); },
-                        1 => if let Err(e) = data_extraction() { eprintln!("Error: {}", e); },
-                        2 => if let Err(e) = data_validation() { eprintln!("Error: {}", e); },
-                        3 => if let Err(e) = file_compression() { eprintln!("Error: {}", e); },
-                        4 => if let Err(e) = multi_file_processing() { eprintln!("Error: {}", e); },
-                        5 => if let Err(e) = custom_data_types() { eprintln!("Error: {}", e); },
-                        6 => if let Err(e) = error_checking() { eprintln!("Error: {}", e); },
-                        7 => if let Err(e) = pretty_printing() { eprintln!("Error: {}", e); },
-                        8 => if let Err(e) = multi_language_support() { eprintln!("Error: {}", e); },
-                        9 => if let Err(e) = speed_optimization() { eprintln!("Error: {}", e); },
+                        0 => if let Err(e) = fast_reading() { print_error(&e)?; },
+                        1 => if let Err(e) = data_extraction() { print_error(&e)?; },
+                        2 => if let Err(e) = data_validation() { print_error(&e)?; },
+                        3 => if let Err(e) = file_compression() { print_error(&e)?; },
+                        4 => if let Err(e) = multi_file_processing() { print_error(&e)?; },
+                        5 => if let Err(e) = custom_data_types() { print_error(&e)?; },
+                        6 => if let Err(e) = error_checking() { print_error(&e)?; },
+                        7 => if let Err(e) = pretty_printing() { print_error(&e)?; },
+                        8 => if let Err(e) = multi_language_support() { print_error(&e)?; },
+                        9 => if let Err(e) = speed_optimization() { print_error(&e)?; },
                         _ => {}
                     }
-                    println!("\nPress any key to return to the main menu...");
+                    clean_print("\nPress any key to return to the main menu...")?;
                     read()?;
                 }
                 KeyCode::Char('q') => break,
@@ -67,23 +70,35 @@ fn main() -> crossterm::Result<()> {
 }
 
 fn display_menu(selected: usize) -> crossterm::Result<()> {
-    execute!(stdout(), Clear(ClearType::All), Hide)?;
-    println!("Parson - Purify your JSON");
+    execute!(
+        stdout(),
+        Clear(ClearType::All),
+        crossterm::cursor::MoveTo(0, 0),
+        Hide
+    )?;
+    
+    println!("{}", "Parson - Purify your JSON".bold());
     println!("Use ↑ and ↓ arrows to move, Enter to select, 'q' to quit\n");
 
     for (index, option) in OPTIONS.iter().enumerate() {
-        if index == selected {
-            println!("→ {}", option);
+        let line = if index == selected {
+            format!("→ {}", option).green()
         } else {
-            println!("  {}", option);
-        }
+            format!("  {}", option).stylize()
+        };
+        execute!(
+            stdout(),
+            crossterm::cursor::MoveTo(0, (index + 3) as u16),
+            Print(line)
+        )?;
     }
+    
     stdout().flush()?;
     Ok(())
 }
 
 fn fast_reading() -> Result<()> {
-    println!("Fast Reading");
+    clean_print("Fast Reading")?;
     let input_dir = Path::new("JSON go here");
     let output_dir = Path::new("JSON fresh here");
 
@@ -100,7 +115,7 @@ fn fast_reading() -> Result<()> {
         }
     }
 
-    println!("All JSON files processed quickly.");
+    clean_print("All JSON files processed quickly.")?;
     Ok(())
 }
 
@@ -347,4 +362,15 @@ fn speed_optimization() -> Result<()> {
 
     println!("Speed optimization simulation completed for all JSON files.");
     Ok(())
+}
+
+fn clean_print(text: &str) -> crossterm::Result<()> {
+    let mut stdout = stdout();
+    queue!(stdout, Print(text), Print("\n"))?;
+    stdout.flush()?;
+    Ok(())
+}
+
+fn print_error(e: &dyn std::error::Error) -> crossterm::Result<()> {
+    clean_print(&format!("Error: {}", e))
 }

@@ -1,1 +1,1 @@
-/home/runner/workspace/target/release/parson: /home/runner/workspace/src/main.rs
+/workspaces/rust/parson/target/release/parson: /workspaces/rust/parson/src/main.rs
