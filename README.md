@@ -13,6 +13,7 @@ Parson is a Rust CLI application for high-performance JSON parsing and querying.
 - Interactive menu with arrow key navigation
 - Automatic processing of JSON files from 'JSIN' to 'JSON' folders
 - Error handling with informative messages
+- Docker support for easy deployment and isolation
 
 ## Installation
 
