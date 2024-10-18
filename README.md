@@ -1,20 +1,18 @@
 # Parson - High-Performance JSON Parser CLI
 
-Parson is a Rust CLI application that uses simd-lite for high-performance JSON parsing and querying. The output can be formatted in multiple ways, including a format compatible with Google Cloud AI processing. This tool is designed to be efficient and easy to use, perfect for processing large JSON files or multiple files in batch.
+Parson is a Rust CLI application for high-performance JSON parsing and querying. This tool is designed to be efficient and easy to use, perfect for processing large JSON files or multiple files in batch.
 
 ## Features
 
-- Fast JSON parsing using simd-lite
+- Fast JSON parsing
 - Advanced JSON querying with support for nested keys and array indexing
 - Support for processing multiple JSON files in batch
 - Multiple output format options:
   - Raw JSON
-  - Google Cloud AI compatible format
   - Pretty-printed JSON
 - Interactive menu with arrow key navigation
-- Automatic processing of JSON files from 'JSON go here' to 'JSON fresh here' folders
+- Automatic processing of JSON files from 'JSIN' to 'JSON' folders
 - Error handling with informative messages
-- Deployable on Replit and other platforms
 
 ## Installation
 
@@ -126,3 +124,10 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## Acknowledgements
 
 We would like to thank the contributors and maintainers of the simd-json library for their excellent work in creating a high-performance JSON parsing solution.
+
+## Setup
+
+1. Create two folders in the project root directory:
+   - `JSON go here`: Place your input JSON files in this folder.
+   - `JSON fresh here`: Processed JSON files will be output to this folder.
+2. Ensure the `config.toml` file is properly set up for your environment.

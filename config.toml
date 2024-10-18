@@ -16,8 +16,8 @@ run_command = "./target/release/parson"
 
 [folders]
 # Specify the input and output folder names
-input_folder = "JSON go here"
-output_folder = "JSON fresh here"
+input_folder = "JSIN"
+output_folder = "JSON"
 
 [performance]
 # Set to true to enable SIMD optimizations (requires CPU support)
