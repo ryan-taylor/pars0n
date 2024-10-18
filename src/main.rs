@@ -1,17 +1,29 @@
-use crossterm::{
-    cursor::Show,
-    event::{read, Event, KeyCode},
-    execute,
-    terminal::{Clear, ClearType, enable_raw_mode, disable_raw_mode},
-};
-use std::io::{stdout, Write};
-use std::fs;
+use std::io::{stdout, Read};
+use std::fs::{self, File};
 use std::path::Path;
+use crossterm::{
+    event::{self, Event, KeyCode, EnableMouseCapture, DisableMouseCapture},
+    execute,
+    terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
+};
+use ratatui::{
+    backend::CrosstermBackend,
+    widgets::{Block, Borders, List, ListItem, Dataset, Chart, Axis, GraphType, Paragraph},
+    style::{Color, Modifier, Style},
+    layout::{Constraint, Direction, Layout},
+    Terminal,
+    symbols,
+};
 use serde_json::Value;
-use anyhow::{Result, Error};
-use flate2::write::GzEncoder;
-use flate2::Compression;
-use std::path::PathBuf;
+use anyhow::{Result, Context};
+
+mod formatter;
+mod parser;
+mod query;
+mod config;
+
+use parser::parse_json;
+use config::Config;
 
 const OPTIONS: [&str; 10] = [
     "Fast Reading",
@@ -26,434 +38,298 @@ const OPTIONS: [&str; 10] = [
     "Speed Optimization",
 ];
 
-const INPUT_DIR: &str = "/workspaces/rust/JSIN";
-const OUTPUT_DIR: &str = "/workspaces/rust/JSON";
-
-fn main() -> crossterm::Result<()> {
-    // Check if we're in the correct directory
-    if !Path::new("/workspaces/rust").exists() {
-        println!("Error: This application must be run in the /workspaces/rust directory.");
-        return Ok(());
-    }
-
-    let input_dir = PathBuf::from(INPUT_DIR);
-    let output_dir = PathBuf::from(OUTPUT_DIR);
-
-    // Check if required directories exist
-    if !input_dir.exists() || !output_dir.exists() {
-        println!("Error: Required directories not found.");
-        if !input_dir.exists() {
-            println!("The '{}' directory is missing.", INPUT_DIR);
-        }
-        if !output_dir.exists() {
-            println!("The '{}' directory is missing.", OUTPUT_DIR);
-        }
-        println!("Please create these directories and add JSON files to the input directory.");
-        println!("Press Enter to exit...");
-        let mut input = String::new();
-        std::io::stdin().read_line(&mut input)?;
-        return Ok(());
-    }
-
-    // Check if input directory is empty
-    if fs::read_dir(&input_dir)?.next().is_none() {
-        println!("\nYour Parson is here my child, please place your JSON in the sin bin ({}) and call for me again!", INPUT_DIR);
-        println!("\nPress Enter to exit...");
-        let mut input = String::new();
-        std::io::stdin().read_line(&mut input)?;
-        return Ok(());
-    }
-
-    // If we've made it here, we can start the application
-    run_application()
+enum AppState {
+    Menu,
+    ExecutingOption,
 }
 
-fn run_application() -> crossterm::Result<()> {
-    enable_raw_mode()?;
+struct App<'a> {
+    items: Vec<ListItem<'a>>,
+    state: ratatui::widgets::ListState,
+    app_state: AppState,
+    output: Vec<String>,
+}
+
+impl<'a> App<'a> {
+    fn new() -> App<'a> {
+        let items = OPTIONS.iter().map(|&i| ListItem::new(i)).collect();
+        let mut state = ratatui::widgets::ListState::default();
+        state.select(Some(0));
+        App { 
+            items, 
+            state, 
+            app_state: AppState::Menu,
+            output: Vec::new(),
+        }
+    }
+
+    fn next(&mut self) {
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i >= self.items.len() - 1 {
+                    0
+                } else {
+                    i + 1
+                }
+            }
+            None => 0,
+        };
+        self.state.select(Some(i));
+    }
+
+    fn previous(&mut self) {
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i == 0 {
+                    self.items.len() - 1
+                } else {
+                    i - 1
+                }
+            }
+            None => 0,
+        };
+        self.state.select(Some(i));
+    }
+}
+
+fn main() -> Result<()> {
+    let config = config::read_config()?;
     
-    let mut selected = 0;
+    terminal::enable_raw_mode()?;
+    let mut stdout = stdout();
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    let backend = CrosstermBackend::new(stdout);
+    let mut terminal = Terminal::new(backend)?;
+
+    let app = App::new();
+    let res = run_app(&mut terminal, app, &config);
+
+    terminal::disable_raw_mode()?;
+    execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        DisableMouseCapture
+    )?;
+    terminal.show_cursor()?;
+
+    if let Err(err) = res {
+        println!("Error: {:?}", err);
+    }
+
+    Ok(())
+}
+
+fn run_app<B: ratatui::backend::Backend>(
+    terminal: &mut Terminal<B>,
+    mut app: App,
+    config: &Config,
+) -> Result<()> {
+    // Generate the data once, outside the loop
+    let chart_data = generate_chart_data(config).unwrap_or_else(|_| vec![(0.0, 0.0)]);
+
     loop {
-        display_menu(selected)?;
-        if let Event::Key(event) = read()? {
-            match event.code {
-                KeyCode::Up => selected = (selected - 1 + OPTIONS.len()) % OPTIONS.len(),
-                KeyCode::Down => selected = (selected + 1) % OPTIONS.len(),
-                KeyCode::Enter => {
-                    execute!(stdout(), Clear(ClearType::All))?;
-                    match selected {
-                        0 => if let Err(e) = fast_reading() { print_error(e)?; },
-                        1 => if let Err(e) = data_extraction() { print_error(e)?; },
-                        2 => if let Err(e) = data_validation() { print_error(e)?; },
-                        3 => if let Err(e) = file_compression() { print_error(e)?; },
-                        4 => if let Err(e) = multi_file_processing() { print_error(e)?; },
-                        5 => if let Err(e) = custom_data_types() { print_error(e)?; },
-                        6 => if let Err(e) = error_checking() { print_error(e)?; },
-                        7 => if let Err(e) = pretty_printing() { print_error(e)?; },
-                        8 => if let Err(e) = multi_language_support() { print_error(e)?; },
-                        9 => if let Err(e) = speed_optimization() { print_error(e)?; },
+        terminal.draw(|f| {
+            let chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .margin(2)
+                .constraints([
+                    Constraint::Percentage(20),
+                    Constraint::Percentage(60),
+                    Constraint::Percentage(20)
+                ].as_ref())
+                .split(f.area());
+
+            let items = List::new(app.items.clone())
+                .block(Block::default().title("Parson Menu").borders(Borders::ALL))
+                .highlight_style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+                .highlight_symbol(">> ");
+
+            f.render_stateful_widget(items, chunks[0], &mut app.state);
+
+            match app.app_state {
+                AppState::Menu => {
+                    let dataset = Dataset::default()
+                        .name("JSON Data")
+                        .marker(symbols::Marker::Braille)
+                        .graph_type(GraphType::Line)
+                        .style(Style::default().fg(Color::Cyan))
+                        .data(&chart_data);
+
+                    let chart = Chart::new(vec![dataset])
+                        .block(Block::default().title("Data Visualization").borders(Borders::ALL))
+                        .x_axis(Axis::default().title("File Index").bounds([0.0, 10.0]))
+                        .y_axis(Axis::default().title("Value").bounds([0.0, 10.0]));
+
+                    f.render_widget(chart, chunks[1]);
+                },
+                AppState::ExecutingOption => {
+                    let output = Paragraph::new(app.output.join("\n"))
+                        .block(Block::default().title("Output").borders(Borders::ALL))
+                        .wrap(ratatui::widgets::Wrap { trim: true });
+                    f.render_widget(output, chunks[1]);
+                }
+            }
+
+            let help = Paragraph::new("↑↓: Navigate | Enter: Select | q: Quit")
+                .block(Block::default().borders(Borders::ALL));
+            f.render_widget(help, chunks[2]);
+        })?;
+
+        if let Event::Key(key) = event::read()? {
+            match app.app_state {
+                AppState::Menu => {
+                    match key.code {
+                        KeyCode::Down => app.next(),
+                        KeyCode::Up => app.previous(),
+                        KeyCode::Enter => {
+                            if let Some(selected) = app.state.selected() {
+                                app.app_state = AppState::ExecutingOption;
+                                app.output = execute_option(selected, config)?;
+                            }
+                        }
+                        KeyCode::Char('q') => break,
                         _ => {}
                     }
-                    println!("\nPress any key to return to the main menu...");
-                    read()?; // Wait for any key press
+                },
+                AppState::ExecutingOption => {
+                    if key.code == KeyCode::Enter {
+                        app.app_state = AppState::Menu;
+                    }
                 }
-                KeyCode::Char('q') => break,
-                KeyCode::Esc => continue,
-                _ => {}
             }
         }
     }
-    disable_raw_mode()?;
-    execute!(stdout(), Show)?;
     Ok(())
 }
 
-fn display_menu(selected: usize) -> crossterm::Result<()> {
-    println!("Parson - Purify your JSON");
-    println!("Use Up/Down arrows to move, Enter to select, Esc to go back, 'q' to quit\n");
-
-    for (index, option) in OPTIONS.iter().enumerate() {
-        if index == selected {
-            println!("→ {}", option);
-        } else {
-            println!("  {}", option);
-        }
+fn execute_option(selected: usize, config: &Config) -> Result<Vec<String>> {
+    let mut output = Vec::new();
+    match selected {
+        0 => fast_reading(config, &mut output)?,
+        1 => data_extraction(config, &mut output)?,
+        2 => data_validation(config, &mut output)?,
+        3 => file_compression(config, &mut output)?,
+        4 => multi_file_processing(config, &mut output)?,
+        5 => custom_data_types(config, &mut output)?,
+        6 => error_checking(config, &mut output)?,
+        7 => pretty_printing(config, &mut output)?,
+        8 => multi_language_support(config, &mut output)?,
+        9 => speed_optimization(config, &mut output)?,
+        _ => {}
     }
+    Ok(output)
+}
+
+// Update all your functions to take &mut Vec<String> as an additional parameter and use it instead of println!
+fn fast_reading(config: &Config, output: &mut Vec<String>) -> Result<()> {
+    output.push("Fast Reading selected.".to_string());
+    let input_dir = Path::new(&config.folders.input_folder);
     
-    stdout().flush()?;
-    Ok(())
-}
-
-fn fast_reading() -> Result<()> {
-    clean_print("Fast Reading")?;
-    let input_dir = PathBuf::from(INPUT_DIR);
-    let output_dir = PathBuf::from(OUTPUT_DIR);
-
-    if !output_dir.exists() {
-        fs::create_dir_all(&output_dir)?;
-        clean_print(&format!("Created output directory: {}", OUTPUT_DIR))?;
+    if !input_dir.exists() {
+        output.push(format!("Error: Input directory '{}' does not exist.", config.folders.input_folder));
+        return Ok(());
     }
 
-    let mut processed_count = 0;
+    let entries = fs::read_dir(input_dir).context(format!("Failed to read directory: {}", config.folders.input_folder))?;
 
-    for entry in fs::read_dir(input_dir)? {
+    let mut file_count = 0;
+    for entry in entries {
         let entry = entry?;
         let path = entry.path();
-        if path.is_file() && path.extension().unwrap_or_default() == "json" {
-            let content = fs::read_to_string(&path)?;
-            let parsed: Value = serde_json::from_str(&content)?;
+        if path.is_file() && path.extension().map_or(false, |ext| ext == "json") {
+            file_count += 1;
+            let mut file = File::open(&path).context(format!("Failed to open file: {:?}", path))?;
+            let mut contents = String::new();
+            file.read_to_string(&mut contents).context(format!("Failed to read file: {:?}", path))?;
             
-            let output_path = output_dir.join(path.file_name().unwrap());
-            let output = serde_json::to_string(&parsed)?;
-            fs::write(output_path, output)?;
-            processed_count += 1;
+            let json: Value = parse_json(&contents)?;
+            output.push(format!("File: {:?}", path.file_name().unwrap()));
+            output.push("First few keys:".to_string());
+            if let Some(obj) = json.as_object() {
+                for (key, _) in obj.iter().take(5) {
+                    output.push(format!("- {}", key));
+                }
+            }
+            output.push(String::new());
         }
     }
 
-    if processed_count > 0 {
-        clean_print(&format!("Processed {} JSON files quickly.", processed_count))?;
+    if file_count == 0 {
+        output.push("No JSON files found in the input directory.".to_string());
     } else {
-        clean_print("No JSON files found in the input directory.")?;
+        output.push(format!("Processed {} JSON file(s).", file_count));
     }
 
     Ok(())
 }
 
-fn data_extraction() -> Result<()> {
-    clean_print("Data Extraction")?;
-    clean_print("Enter JSON key or path (e.g., 'user.name' or '/data/0/id'):")?;
-    
-    let query = match get_user_input("")? {
-        Some(input) => input,
-        None => return Ok(()), // User pressed Esc
-    };
+// Update other functions similarly...
 
-    let input_dir = PathBuf::from(INPUT_DIR);
-    for entry in fs::read_dir(input_dir)? {
+fn generate_chart_data(config: &Config) -> Result<Vec<(f64, f64)>> {
+    let input_dir = Path::new(&config.folders.input_folder);
+    let mut data = Vec::new();
+
+    let entries = fs::read_dir(input_dir)?;
+    for (index, entry) in entries.enumerate() {
         let entry = entry?;
         let path = entry.path();
-        if path.is_file() && path.extension().unwrap_or_default() == "json" {
-            let content = fs::read_to_string(&path)?;
-            let parsed: Value = serde_json::from_str(&content)?;
-            if let Some(result) = parsed.pointer(&query) {  // Changed this line
-                clean_print(&format!("{}: {}", path.display(), result))?;  // Changed this line
-            }
-        }
-    }
-
-    Ok(())
-}
-
-fn data_validation() -> Result<()> {
-    clean_print("Data Validation")?;
-    let input_dir = PathBuf::from(INPUT_DIR);
-    let mut valid_count = 0;
-    let mut invalid_count = 0;
-
-    for entry in fs::read_dir(input_dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.is_file() && path.extension().unwrap_or_default() == "json" {
-            let content = fs::read_to_string(&path)?;
-            match serde_json::from_str::<Value>(&content) {
-                Ok(_) => valid_count += 1,
-                Err(_) => invalid_count += 1,
-            }
-        }
-    }
-
-    clean_print(&format!("{} valid, {} invalid files", valid_count, invalid_count))?;
-    Ok(())
-}
-
-fn file_compression() -> Result<()> {
-    clean_print("File Compression")?;
-    clean_print("Select compression level:")?;
-    clean_print("1. Low")?;
-    clean_print("2. Medium")?;
-    clean_print("3. High")?;
-    
-    let compression_level = loop {
-        if let Some(input) = get_user_input("")? {
-            match input.as_str() {
-                "1" => break Compression::fast(),
-                "2" => break Compression::default(),
-                "3" => break Compression::best(),
-                _ => {
-                    clean_print("Invalid input. Please enter 1, 2, or 3.")?;
-                    continue;
-                }
-            }
-        } else {
-            return Ok(()); // User pressed Esc
-        }
-    };
-
-    let input_dir = PathBuf::from(INPUT_DIR);
-    let output_dir = PathBuf::from(OUTPUT_DIR);
-
-    for entry in fs::read_dir(input_dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.is_file() && path.extension().unwrap_or_default() == "json" {
-            let content = fs::read_to_string(&path)?;
-            let output_path = output_dir.join(path.file_name().unwrap()).with_extension("json.gz");
-            let file = fs::File::create(&output_path)?;
-            let mut encoder = GzEncoder::new(file, compression_level);
-            encoder.write_all(content.as_bytes())?;
-            encoder.finish()?;
-            clean_print(&format!("Compressed: {}", output_path.display()))?;
-        }
-    }
-
-    clean_print("All JSON files compressed.")?;
-    Ok(())
-}
-
-fn multi_file_processing() -> Result<()> {
-    clean_print("Multi-File Processing")?;
-    clean_print("Enter file pattern (e.g., '*.json' or 'user_*.json'):")?;
-    
-    let pattern = match get_user_input("")? {
-        Some(input) => input,
-        None => return Ok(()), // User pressed Esc
-    };
-
-    let input_dir = PathBuf::from(INPUT_DIR);
-    for entry in fs::read_dir(input_dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.is_file() && path.file_name().unwrap().to_str().unwrap().contains(&pattern) {
-            clean_print(&format!("Processing: {}", path.display()))?;
-            // Add your processing logic here
-        }
-    }
-
-    clean_print("All matching files processed.")?;
-    Ok(())
-}
-
-fn custom_data_types() -> Result<()> {
-    clean_print("Custom Data Types")?;
-    clean_print("Enter a custom data type (e.g., 'date', 'email', 'phone'):")?;
-    
-    let custom_type = match get_user_input("")? {
-        Some(input) => input,
-        None => return Ok(()), // User pressed Esc
-    };
-
-    clean_print("Enter a JSON key to apply the custom type:")?;
-    let key = match get_user_input("")? {
-        Some(input) => input,
-        None => return Ok(()), // User pressed Esc
-    };
-
-    let input_dir = PathBuf::from(INPUT_DIR);
-    for entry in fs::read_dir(input_dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.is_file() && path.extension().unwrap_or_default() == "json" {
-            let content = fs::read_to_string(&path)?;
-            let mut parsed: Value = serde_json::from_str(&content)?;
-            if parsed.pointer_mut(&key).is_some() {
-                // This is a placeholder. In a real implementation, you'd validate and possibly
-                // transform the value based on the custom_type.
-                clean_print(&format!("Applied '{}' type to '{}' in {}", custom_type, key, path.display()))?;
-            }
-        }
-    }
-
-    clean_print("Custom data type applied to all matching files.")?;
-    Ok(())
-}
-
-fn error_checking() -> Result<()> {
-    clean_print("Error Checking")?;
-    let input_dir = PathBuf::from(INPUT_DIR);
-    for entry in fs::read_dir(input_dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.is_file() && path.extension().unwrap_or_default() == "json" {
-            let content = fs::read_to_string(&path)?;
-            match serde_json::from_str::<Value>(&content) {
-                Ok(_) => clean_print(&format!("{}: No errors found", path.display()))?,
-                Err(e) => clean_print(&format!("{}: Error - {}", path.display(), e))?,
-            }
-        }
-    }
-
-    clean_print("Error checking completed for all JSON files.")?;
-    Ok(())
-}
-
-fn pretty_printing() -> Result<()> {
-    clean_print("Pretty Printing")?;
-    clean_print("Enter indentation spaces (2-8):")?;
-    
-    let spaces: usize = loop {
-        match get_user_input("")? {
-            Some(input) => match input.parse() {
-                Ok(n) if (2..=8).contains(&n) => break n,
-                _ => clean_print("Invalid input. Please enter a number between 2 and 8.")?,
-            },
-            None => return Ok(()), // User pressed Esc
-        }
-    };
-
-    let input_dir = PathBuf::from(INPUT_DIR);
-    let output_dir = PathBuf::from(OUTPUT_DIR);
-
-    for entry in fs::read_dir(input_dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.is_file() && path.extension().unwrap_or_default() == "json" {
-            let content = fs::read_to_string(&path)?;
-            let parsed: Value = serde_json::from_str(&content)?;
+        if path.is_file() && path.extension().map_or(false, |ext| ext == "json") {
+            let contents = fs::read_to_string(&path)?;
+            let json: Value = serde_json::from_str(&contents)?;
             
-            let output_path = output_dir.join(path.file_name().unwrap());
-            let output = serde_json::to_string_pretty(&parsed)?;
-            let indented = output.lines().map(|line| " ".repeat(spaces) + line).collect::<Vec<_>>().join("\n");
-            fs::write(&output_path, indented)?;
-            clean_print(&format!("Pretty printed: {}", output_path.display()))?;
-        }
-    }
-
-    clean_print("All JSON files pretty printed.")?;
-    Ok(())
-}
-
-fn multi_language_support() -> Result<()> {
-    clean_print("Multi-Language Support")?;
-    clean_print("Enter target language (e.g., 'es' for Spanish, 'fr' for French):")?;
-    
-    let target_lang = match get_user_input("")? {
-        Some(input) => input,
-        None => return Ok(()), // User pressed Esc
-    };
-
-    clean_print("This is a placeholder for multi-language support.")?;
-    clean_print(&format!("In a real implementation, this would translate JSON keys to {}.", target_lang))?;
-    clean_print("For now, we'll just demonstrate awareness of the selected language.")?;
-
-    let input_dir = PathBuf::from(INPUT_DIR);
-    for entry in fs::read_dir(input_dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.is_file() && path.extension().unwrap_or_default() == "json" {
-            clean_print(&format!("Would process {} for {} language support", path.display(), target_lang))?;
-        }
-    }
-
-    clean_print("Multi-language support simulation completed.")?;
-    Ok(())
-}
-
-fn speed_optimization() -> Result<()> {
-    clean_print("Speed Optimization")?;
-    clean_print("Select optimization level:")?;
-    clean_print("1. Balanced")?;
-    clean_print("2. Memory-Optimized")?;
-    clean_print("3. Speed-Optimized")?;
-    
-    let optimization_level = loop {
-        match get_user_input("")? {
-            Some(input) => match input.as_str() {
-                "1" => break "Balanced",
-                "2" => break "Memory-Optimized",
-                "3" => break "Speed-Optimized",
-                _ => {
-                    clean_print("Invalid input. Please enter 1, 2, or 3.")?;
-                    continue;
-                }
-            },
-            None => return Ok(()), // User pressed Esc
-        }
-    };
-
-    clean_print(&format!("Applying {} optimization...", optimization_level))?;
-    // This is a placeholder. In a real implementation, you'd apply different
-    // parsing or processing strategies based on the selected optimization level.
-
-    let input_dir = PathBuf::from(INPUT_DIR);
-    for entry in fs::read_dir(input_dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.is_file() && path.extension().unwrap_or_default() == "json" {
-            clean_print(&format!("Optimized processing of: {}", path.display()))?;
-        }
-    }
-
-    clean_print("Speed optimization simulation completed for all JSON files.")?;
-    Ok(())
-}
-
-fn clean_print(text: &str) -> crossterm::Result<()> {
-    println!("{}", text);
-    stdout().flush()?;
-    Ok(())
-}
-
-fn print_error(e: Error) -> crossterm::Result<()> {
-    clean_print(&format!("Error: {}", e))
-}
-
-fn get_user_input(prompt: &str) -> crossterm::Result<Option<String>> {
-    println!("\n{}", prompt);
-    print!("> ");
-    stdout().flush()?;
-    loop {
-        if let Event::Key(event) = read()? {
-            match event.code {
-                KeyCode::Esc => return Ok(None),
-                KeyCode::Enter => {
-                    return Ok(Some(String::new())); // Empty string for Enter key
-                }
-                KeyCode::Char(c) => {
-                    print!("{}", c);
-                    stdout().flush()?;
-                    return Ok(Some(c.to_string()));
-                }
-                _ => {}
+            // Assuming we're interested in a numeric value from the JSON
+            if let Some(value) = json.get("some_key").and_then(|v| v.as_f64()) {
+                data.push((index as f64, value));
             }
         }
     }
+
+    Ok(data)
+}
+
+// Add these stub functions after the `fast_reading` function
+
+fn data_extraction(_config: &Config, output: &mut Vec<String>) -> Result<()> {
+    output.push("Data Extraction not implemented yet.".to_string());
+    Ok(())
+}
+
+fn data_validation(_config: &Config, output: &mut Vec<String>) -> Result<()> {
+    output.push("Data Validation not implemented yet.".to_string());
+    Ok(())
+}
+
+fn file_compression(_config: &Config, output: &mut Vec<String>) -> Result<()> {
+    output.push("File Compression not implemented yet.".to_string());
+    Ok(())
+}
+
+fn multi_file_processing(_config: &Config, output: &mut Vec<String>) -> Result<()> {
+    output.push("Multi-File Processing not implemented yet.".to_string());
+    Ok(())
+}
+
+fn custom_data_types(_config: &Config, output: &mut Vec<String>) -> Result<()> {
+    output.push("Custom Data Types not implemented yet.".to_string());
+    Ok(())
+}
+
+fn error_checking(_config: &Config, output: &mut Vec<String>) -> Result<()> {
+    output.push("Error Checking not implemented yet.".to_string());
+    Ok(())
+}
+
+fn pretty_printing(_config: &Config, output: &mut Vec<String>) -> Result<()> {
+    output.push("Pretty Printing not implemented yet.".to_string());
+    Ok(())
+}
+
+fn multi_language_support(_config: &Config, output: &mut Vec<String>) -> Result<()> {
+    output.push("Multi-Language Support not implemented yet.".to_string());
+    Ok(())
+}
+
+fn speed_optimization(_config: &Config, output: &mut Vec<String>) -> Result<()> {
+    output.push("Speed Optimization not implemented yet.".to_string());
+    Ok(())
 }

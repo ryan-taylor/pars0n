@@ -4,25 +4,11 @@
 name = "parson"
 version = "0.1.0"
 
-[deployment]
-# Set the target to "non-replit" for deployments outside of Replit
-target = "non-replit"
-
-# Command to build the project
-build_command = "cargo build --release"
-
-# Command to run the application
-run_command = "./target/release/parson"
-
 [folders]
-# Specify the input and output folder names
-input_folder = "JSIN"
-output_folder = "JSON"
+# Specify the input folder path
+input_folder = "/workspaces/rust/JSIN"
 
 [performance]
-# Set to true to enable SIMD optimizations (requires CPU support)
-use_simd = true
-
 # Default compression level for file compression (1-9, where 9 is highest)
 default_compression_level = 6
 

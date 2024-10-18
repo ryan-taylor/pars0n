@@ -3,7 +3,7 @@ Cargo.lock
 *.rs.bk
 
 # Ignore contents of JSIN and JSON folders, but not the folders themselves
-/workspaces/rust/JSIN/*
-!/workspaces/rust/JSIN/.gitkeep
-/workspaces/rust/JSON/*
-!/workspaces/rust/JSON/.gitkeep
+/JSIN/*
+!/JSIN/.gitkeep
+/JSON/*
+!/JSON/.gitkeep
