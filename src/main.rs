@@ -13,6 +13,8 @@ use serde_json::Value;
 use anyhow::{Result, Error};
 use flate2::write::GzEncoder;
 use flate2::Compression;
+use std::path::PathBuf;
+use std::env;
 
 const OPTIONS: [&str; 10] = [
     "Fast Reading",
@@ -27,11 +29,44 @@ const OPTIONS: [&str; 10] = [
     "Speed Optimization",
 ];
 
+const INPUT_DIR: &str = "/workspaces/rust/JSIN";
+const OUTPUT_DIR: &str = "/workspaces/rust/JSON";
+
 fn main() -> crossterm::Result<()> {
+    // Add this check at the beginning of main
+    if !Path::new("/workspaces/rust").exists() {
+        eprintln!("Error: This application must be run in the /workspaces/rust directory.");
+        return Ok(());
+    }
+
     enable_raw_mode()?;
     
     if !crossterm::terminal::is_raw_mode_enabled()? {
         eprintln!("Failed to enter raw mode. The CLI UI may not work correctly.");
+    }
+
+    let input_dir = PathBuf::from(INPUT_DIR);
+    let output_dir = PathBuf::from(OUTPUT_DIR);
+
+    if !input_dir.exists() || !output_dir.exists() {
+        clean_print("Error: Required directories not found.")?;
+        if !input_dir.exists() {
+            clean_print(&format!("The '{}' directory is missing.", INPUT_DIR))?;
+        }
+        if !output_dir.exists() {
+            clean_print(&format!("The '{}' directory is missing.", OUTPUT_DIR))?;
+        }
+        clean_print("Please create these directories and add JSON files to the input directory.")?;
+        clean_print("Press any key to exit...")?;
+        read()?;
+        return Ok(());
+    }
+
+    if fs::read_dir(&input_dir)?.next().is_none() {
+        clean_print(&format!("The '{}' directory is empty. Please add JSON files to process.", INPUT_DIR))?;
+        clean_print("Press any key to exit...")?;
+        read()?;
+        return Ok(());
     }
 
     let mut selected = 0;
@@ -57,19 +92,10 @@ fn main() -> crossterm::Result<()> {
                         _ => {}
                     }
                     clean_print("\nPress any key to return to the main menu...")?;
-                    // Wait for a key press before returning to the main menu
-                    loop {
-                        if let Event::Key(_) = read()? {
-                            break;
-                        }
-                    }
+                    read()?; // Wait for any key press
                 }
                 KeyCode::Char('q') => break,
-                KeyCode::Esc => {
-                    // If we're in a submenu, this will just return to the main menu
-                    // If we're already in the main menu, this will do nothing
-                    continue;
-                }
+                KeyCode::Esc => continue,
                 _ => {}
             }
         }
@@ -110,8 +136,15 @@ fn display_menu(selected: usize) -> crossterm::Result<()> {
 
 fn fast_reading() -> Result<()> {
     clean_print("Fast Reading")?;
-    let input_dir = Path::new("JSON go here");
-    let output_dir = Path::new("JSON fresh here");
+    let input_dir = PathBuf::from(INPUT_DIR);
+    let output_dir = PathBuf::from(OUTPUT_DIR);
+
+    if !output_dir.exists() {
+        fs::create_dir_all(&output_dir)?;
+        clean_print(&format!("Created output directory: {}", OUTPUT_DIR))?;
+    }
+
+    let mut processed_count = 0;
 
     for entry in fs::read_dir(input_dir)? {
         let entry = entry?;
@@ -123,29 +156,37 @@ fn fast_reading() -> Result<()> {
             let output_path = output_dir.join(path.file_name().unwrap());
             let output = serde_json::to_string(&parsed)?;
             fs::write(output_path, output)?;
+            processed_count += 1;
         }
     }
 
-    clean_print("All JSON files processed quickly.")?;
+    if processed_count > 0 {
+        clean_print(&format!("Processed {} JSON files quickly.", processed_count))?;
+    } else {
+        clean_print("No JSON files found in the input directory.")?;
+    }
+
     Ok(())
 }
 
 fn data_extraction() -> Result<()> {
-    println!("Data Extraction");
-    println!("Enter JSON key or path (e.g., 'user.name' or '/data/0/id'):");
-    let mut input = String::new();
-    std::io::stdin().read_line(&mut input)?;
-    let query = input.trim();
+    clean_print("Data Extraction")?;
+    clean_print("Enter JSON key or path (e.g., 'user.name' or '/data/0/id'):")?;
+    
+    let query = match get_user_input("")? {
+        Some(input) => input,
+        None => return Ok(()), // User pressed Esc
+    };
 
-    let input_dir = Path::new("JSON go here");
+    let input_dir = PathBuf::from(INPUT_DIR);
     for entry in fs::read_dir(input_dir)? {
         let entry = entry?;
         let path = entry.path();
         if path.is_file() && path.extension().unwrap_or_default() == "json" {
             let content = fs::read_to_string(&path)?;
             let parsed: Value = serde_json::from_str(&content)?;
-            if let Some(result) = parsed.pointer(query) {
-                println!("{}: {}", path.display(), result);
+            if let Some(result) = parsed.pointer(&query) {  // Changed this line
+                clean_print(&format!("{}: {}", path.display(), result))?;  // Changed this line
             }
         }
     }
@@ -154,8 +195,8 @@ fn data_extraction() -> Result<()> {
 }
 
 fn data_validation() -> Result<()> {
-    println!("Data Validation");
-    let input_dir = Path::new("JSON go here");
+    clean_print("Data Validation")?;
+    let input_dir = PathBuf::from(INPUT_DIR);
     let mut valid_count = 0;
     let mut invalid_count = 0;
 
@@ -171,31 +212,35 @@ fn data_validation() -> Result<()> {
         }
     }
 
-    println!("{} valid, {} invalid files", valid_count, invalid_count);
+    clean_print(&format!("{} valid, {} invalid files", valid_count, invalid_count))?;
     Ok(())
 }
 
 fn file_compression() -> Result<()> {
-    println!("File Compression");
-    println!("Select compression level:");
-    println!("1. Low");
-    println!("2. Medium");
-    println!("3. High");
+    clean_print("File Compression")?;
+    clean_print("Select compression level:")?;
+    clean_print("1. Low")?;
+    clean_print("2. Medium")?;
+    clean_print("3. High")?;
     
-    let mut input = String::new();
-    std::io::stdin().read_line(&mut input)?;
-    let compression_level = match input.trim() {
-        "1" => Compression::fast(),
-        "2" => Compression::default(),
-        "3" => Compression::best(),
-        _ => {
-            println!("Invalid input. Using default compression level.");
-            Compression::default()
+    let compression_level = loop {
+        if let Some(input) = get_user_input("")? {
+            match input.as_str() {
+                "1" => break Compression::fast(),
+                "2" => break Compression::default(),
+                "3" => break Compression::best(),
+                _ => {
+                    clean_print("Invalid input. Please enter 1, 2, or 3.")?;
+                    continue;
+                }
+            }
+        } else {
+            return Ok(()); // User pressed Esc
         }
     };
 
-    let input_dir = Path::new("JSON go here");
-    let output_dir = Path::new("JSON fresh here");
+    let input_dir = PathBuf::from(INPUT_DIR);
+    let output_dir = PathBuf::from(OUTPUT_DIR);
 
     for entry in fs::read_dir(input_dir)? {
         let entry = entry?;
@@ -207,94 +252,106 @@ fn file_compression() -> Result<()> {
             let mut encoder = GzEncoder::new(file, compression_level);
             encoder.write_all(content.as_bytes())?;
             encoder.finish()?;
-            println!("Compressed: {}", output_path.display());
+            clean_print(&format!("Compressed: {}", output_path.display()))?;
         }
     }
 
-    println!("All JSON files compressed.");
+    clean_print("All JSON files compressed.")?;
     Ok(())
 }
 
 fn multi_file_processing() -> Result<()> {
-    println!("Multi-File Processing");
-    println!("Enter file pattern (e.g., '*.json' or 'user_*.json'):");
-    let mut input = String::new();
-    std::io::stdin().read_line(&mut input)?;
-    let pattern = input.trim();
+    clean_print("Multi-File Processing")?;
+    clean_print("Enter file pattern (e.g., '*.json' or 'user_*.json'):")?;
+    
+    let pattern = match get_user_input("")? {
+        Some(input) => input,
+        None => return Ok(()), // User pressed Esc
+    };
 
-    let input_dir = Path::new("JSON go here");
+    let input_dir = PathBuf::from(INPUT_DIR);
     for entry in fs::read_dir(input_dir)? {
         let entry = entry?;
         let path = entry.path();
-        if path.is_file() && path.file_name().unwrap().to_str().unwrap().contains(pattern) {
-            println!("Processing: {}", path.display());
+        if path.is_file() && path.file_name().unwrap().to_str().unwrap().contains(&pattern) {
+            clean_print(&format!("Processing: {}", path.display()))?;
             // Add your processing logic here
         }
     }
 
-    println!("All matching files processed.");
+    clean_print("All matching files processed.")?;
     Ok(())
 }
 
 fn custom_data_types() -> Result<()> {
-    println!("Custom Data Types");
-    println!("Enter a custom data type (e.g., 'date', 'email', 'phone'):");
-    let mut input = String::new();
-    std::io::stdin().read_line(&mut input)?;
-    let custom_type = input.trim();
+    clean_print("Custom Data Types")?;
+    clean_print("Enter a custom data type (e.g., 'date', 'email', 'phone'):")?;
+    
+    let custom_type = match get_user_input("")? {
+        Some(input) => input,
+        None => return Ok(()), // User pressed Esc
+    };
 
-    println!("Enter a JSON key to apply the custom type:");
-    let mut key_input = String::new();
-    std::io::stdin().read_line(&mut key_input)?;
-    let key = key_input.trim();
+    clean_print("Enter a JSON key to apply the custom type:")?;
+    let key = match get_user_input("")? {
+        Some(input) => input,
+        None => return Ok(()), // User pressed Esc
+    };
 
-    let input_dir = Path::new("JSON go here");
+    let input_dir = PathBuf::from(INPUT_DIR);
     for entry in fs::read_dir(input_dir)? {
         let entry = entry?;
         let path = entry.path();
         if path.is_file() && path.extension().unwrap_or_default() == "json" {
             let content = fs::read_to_string(&path)?;
             let mut parsed: Value = serde_json::from_str(&content)?;
-            if parsed.pointer_mut(key).is_some() {
+            if parsed.pointer_mut(&key).is_some() {
                 // This is a placeholder. In a real implementation, you'd validate and possibly
                 // transform the value based on the custom_type.
-                println!("Applied '{}' type to '{}' in {}", custom_type, key, path.display());
+                clean_print(&format!("Applied '{}' type to '{}' in {}", custom_type, key, path.display()))?;
             }
         }
     }
 
-    println!("Custom data type applied to all matching files.");
+    clean_print("Custom data type applied to all matching files.")?;
     Ok(())
 }
 
 fn error_checking() -> Result<()> {
-    println!("Error Checking");
-    let input_dir = Path::new("JSON go here");
+    clean_print("Error Checking")?;
+    let input_dir = PathBuf::from(INPUT_DIR);
     for entry in fs::read_dir(input_dir)? {
         let entry = entry?;
         let path = entry.path();
         if path.is_file() && path.extension().unwrap_or_default() == "json" {
             let content = fs::read_to_string(&path)?;
             match serde_json::from_str::<Value>(&content) {
-                Ok(_) => println!("{}: No errors found", path.display()),
-                Err(e) => println!("{}: Error - {}", path.display(), e),
+                Ok(_) => clean_print(&format!("{}: No errors found", path.display()))?,
+                Err(e) => clean_print(&format!("{}: Error - {}", path.display(), e))?,
             }
         }
     }
 
-    println!("Error checking completed for all JSON files.");
+    clean_print("Error checking completed for all JSON files.")?;
     Ok(())
 }
 
 fn pretty_printing() -> Result<()> {
-    println!("Pretty Printing");
-    println!("Enter indentation spaces (2-8):");
-    let mut input = String::new();
-    std::io::stdin().read_line(&mut input)?;
-    let spaces: usize = input.trim().parse()?;
+    clean_print("Pretty Printing")?;
+    clean_print("Enter indentation spaces (2-8):")?;
+    
+    let spaces: usize = loop {
+        match get_user_input("")? {
+            Some(input) => match input.parse() {
+                Ok(n) if (2..=8).contains(&n) => break n,
+                _ => clean_print("Invalid input. Please enter a number between 2 and 8.")?,
+            },
+            None => return Ok(()), // User pressed Esc
+        }
+    };
 
-    let input_dir = Path::new("JSON go here");
-    let output_dir = Path::new("JSON fresh here");
+    let input_dir = PathBuf::from(INPUT_DIR);
+    let output_dir = PathBuf::from(OUTPUT_DIR);
 
     for entry in fs::read_dir(input_dir)? {
         let entry = entry?;
@@ -307,81 +364,109 @@ fn pretty_printing() -> Result<()> {
             let output = serde_json::to_string_pretty(&parsed)?;
             let indented = output.lines().map(|line| " ".repeat(spaces) + line).collect::<Vec<_>>().join("\n");
             fs::write(&output_path, indented)?;
-            println!("Pretty printed: {}", output_path.display());
+            clean_print(&format!("Pretty printed: {}", output_path.display()))?;
         }
     }
 
-    println!("All JSON files pretty printed.");
+    clean_print("All JSON files pretty printed.")?;
     Ok(())
 }
 
 fn multi_language_support() -> Result<()> {
-    println!("Multi-Language Support");
-    println!("Enter target language (e.g., 'es' for Spanish, 'fr' for French):");
-    let mut input = String::new();
-    std::io::stdin().read_line(&mut input)?;
-    let target_lang = input.trim();
+    clean_print("Multi-Language Support")?;
+    clean_print("Enter target language (e.g., 'es' for Spanish, 'fr' for French):")?;
+    
+    let target_lang = match get_user_input("")? {
+        Some(input) => input,
+        None => return Ok(()), // User pressed Esc
+    };
 
-    println!("This is a placeholder for multi-language support.");
-    println!("In a real implementation, this would translate JSON keys to {}.", target_lang);
-    println!("For now, we'll just demonstrate awareness of the selected language.");
+    clean_print("This is a placeholder for multi-language support.")?;
+    clean_print(&format!("In a real implementation, this would translate JSON keys to {}.", target_lang))?;
+    clean_print("For now, we'll just demonstrate awareness of the selected language.")?;
 
-    let input_dir = Path::new("JSON go here");
+    let input_dir = PathBuf::from(INPUT_DIR);
     for entry in fs::read_dir(input_dir)? {
         let entry = entry?;
         let path = entry.path();
         if path.is_file() && path.extension().unwrap_or_default() == "json" {
-            println!("Would process {} for {} language support", path.display(), target_lang);
+            clean_print(&format!("Would process {} for {} language support", path.display(), target_lang))?;
         }
     }
 
-    println!("Multi-language support simulation completed.");
+    clean_print("Multi-language support simulation completed.")?;
     Ok(())
 }
 
 fn speed_optimization() -> Result<()> {
-    println!("Speed Optimization");
-    println!("Select optimization level:");
-    println!("1. Balanced");
-    println!("2. Memory-Optimized");
-    println!("3. Speed-Optimized");
+    clean_print("Speed Optimization")?;
+    clean_print("Select optimization level:")?;
+    clean_print("1. Balanced")?;
+    clean_print("2. Memory-Optimized")?;
+    clean_print("3. Speed-Optimized")?;
     
-    let mut input = String::new();
-    std::io::stdin().read_line(&mut input)?;
-    let optimization_level = match input.trim() {
-        "1" => "Balanced",
-        "2" => "Memory-Optimized",
-        "3" => "Speed-Optimized",
-        _ => {
-            println!("Invalid input. Using Balanced optimization.");
-            "Balanced"
+    let optimization_level = loop {
+        match get_user_input("")? {
+            Some(input) => match input.as_str() {
+                "1" => break "Balanced",
+                "2" => break "Memory-Optimized",
+                "3" => break "Speed-Optimized",
+                _ => {
+                    clean_print("Invalid input. Please enter 1, 2, or 3.")?;
+                    continue;
+                }
+            },
+            None => return Ok(()), // User pressed Esc
         }
     };
 
-    println!("Applying {} optimization...", optimization_level);
+    clean_print(&format!("Applying {} optimization...", optimization_level))?;
     // This is a placeholder. In a real implementation, you'd apply different
     // parsing or processing strategies based on the selected optimization level.
 
-    let input_dir = Path::new("JSON go here");
+    let input_dir = PathBuf::from(INPUT_DIR);
     for entry in fs::read_dir(input_dir)? {
         let entry = entry?;
         let path = entry.path();
         if path.is_file() && path.extension().unwrap_or_default() == "json" {
-            println!("Optimized processing of: {}", path.display());
+            clean_print(&format!("Optimized processing of: {}", path.display()))?;
         }
     }
 
-    println!("Speed optimization simulation completed for all JSON files.");
+    clean_print("Speed optimization simulation completed for all JSON files.")?;
     Ok(())
 }
 
 fn clean_print(text: &str) -> crossterm::Result<()> {
-    let mut stdout = stdout();
-    queue!(stdout, Print(text), Print("\n"))?;
-    stdout.flush()?;
+    execute!(
+        stdout(),
+        Print(text),
+        Print("\n")
+    )?;
+    stdout().flush()?;
     Ok(())
 }
 
 fn print_error(e: Error) -> crossterm::Result<()> {
     clean_print(&format!("Error: {}", e))
+}
+
+fn get_user_input(prompt: &str) -> crossterm::Result<Option<String>> {
+    clean_print(prompt)?;
+    loop {
+        if let Event::Key(event) = read()? {
+            match event.code {
+                KeyCode::Esc => return Ok(None),
+                KeyCode::Enter => {
+                    return Ok(Some(String::new())); // Empty string for Enter key
+                }
+                KeyCode::Char(c) => {
+                    print!("{}", c);
+                    stdout().flush()?;
+                    return Ok(Some(c.to_string()));
+                }
+                _ => {}
+            }
+        }
+    }
 }
