@@ -23,3 +23,4 @@ pub enum OutputFormat {
 //     serde_json::to_string_pretty(&formatted)
 //         .map_err(|e| e.into())
 // }
+

@@ -1,19 +1,17 @@
 # Parson - High-Performance JSON Parser CLI
 
-Parson is a Rust CLI application for high-performance JSON parsing and querying. This tool is designed to be efficient and easy to use, perfect for processing large JSON files or multiple files in batch.
+Parson is a Rust CLI application for high-performance JSON parsing and visualization. This tool is designed to be efficient and easy to use, perfect for processing large JSON files or multiple files in batch.
 
 ## Features
 
-- Fast JSON parsing
-- Advanced JSON querying with support for nested keys and array indexing
+- Fast JSON parsing and reading
+- Data visualization with interactive charts
+- Advanced JSON querying with support for nested keys
 - Support for processing multiple JSON files in batch
-- Multiple output format options:
-  - Raw JSON
-  - Pretty-printed JSON
 - Interactive menu with arrow key navigation
-- Automatic processing of JSON files from 'JSIN' to 'JSON' folders
+- Automatic processing of JSON files from input to output folders
 - Error handling with informative messages
-- Docker support for easy deployment and isolation
+- TUI (Text User Interface) for better user experience
 
 ## Installation
 
