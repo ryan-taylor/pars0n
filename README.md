@@ -132,3 +132,26 @@ We would like to thank the contributors and maintainers of the simd-json library
    - `JSON go here`: Place your input JSON files in this folder.
    - `JSON fresh here`: Processed JSON files will be output to this folder.
 2. Ensure the `config.toml` file is properly set up for your environment.
+
+## Running with Docker
+
+To run Parson using Docker while accessing files on your local machine:
+
+1. Create two directories on your desktop:
+   - `desktop_JSIN`: for input JSON files
+   - `desktop_JSON`: for output files
+
+2. Run the Docker container with volume mounting:
+
+   ```bash
+   docker run -it --rm \
+     -v /path/to/desktop_JSIN:/workspaces/rust/JSIN \
+     -v /path/to/desktop_JSON:/workspaces/rust/JSON \
+     parson
+   ```
+
+   Replace `/path/to/desktop_JSIN` and `/path/to/desktop_JSON` with the actual paths to the directories you created.
+
+3. Place your input JSON files in the `desktop_JSIN` folder on your desktop.
+
+4. Run Parson from within the Docker container. The processed files will appear in the `desktop_JSON` folder on your desktop.
